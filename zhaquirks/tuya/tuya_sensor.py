@@ -557,9 +557,11 @@ class TuyaSleepyMCUCluster(TuyaMCUCluster):
             # else: the device still has the old value, which must not replace the
             # value that was just written
 
-        status = super().handle_get_data(
-            TuyaCommand(status=command.status, tsn=command.tsn, datapoints=reported)
-        )
+        status = foundation.Status.SUCCESS
+        if reported:
+            status = super().handle_get_data(
+                TuyaCommand(status=command.status, tsn=command.tsn, datapoints=reported)
+            )
         self._resend_pending()
         return status
 
