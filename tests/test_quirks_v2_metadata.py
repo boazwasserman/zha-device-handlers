@@ -17,9 +17,9 @@ from zhaquirks.builder.metadata import (
     ChangedEntityMetadata,
     DeviceAlertLevel,
     DeviceAlertMetadata,
+    EntityFilter,
     ExposesFeatureMetadata,
     NumberMetadata,
-    PreventDefaultEntityCreationMetadata,
     SwitchMetadata,
     WriteAttributeButtonMetadata,
     ZCLCommandButtonMetadata,
@@ -358,34 +358,13 @@ def test_quirks_v2_disable_entity_creation():
     )
 
     assert entry.zha_device_factory.quirk_definition.disabled_default_entities == (
-        PreventDefaultEntityCreationMetadata(
-            endpoint_id=1,
-            cluster_id=None,
-            cluster_type=None,
-            unique_id_suffix="something",
-            function=None,
+        EntityFilter(endpoint_id=1, unique_id_suffix="something"),
+        # Removal matches either cluster type by default
+        EntityFilter(endpoint_id=1, cluster_id=OnOff.cluster_id),
+        EntityFilter(
+            endpoint_id=1, cluster_id=OnOff.cluster_id, cluster_type=ClusterType.Client
         ),
-        PreventDefaultEntityCreationMetadata(
-            endpoint_id=1,
-            cluster_id=OnOff.cluster_id,
-            cluster_type=ClusterType.Server,  # by default
-            unique_id_suffix=None,
-            function=None,
-        ),
-        PreventDefaultEntityCreationMetadata(
-            endpoint_id=1,
-            cluster_id=OnOff.cluster_id,
-            cluster_type=ClusterType.Client,
-            unique_id_suffix=None,
-            function=None,
-        ),
-        PreventDefaultEntityCreationMetadata(
-            endpoint_id=None,
-            cluster_id=None,
-            cluster_type=None,
-            unique_id_suffix=None,
-            function=filter_func,
-        ),
+        EntityFilter(function=filter_func),
     )
 
 
@@ -407,21 +386,23 @@ def test_quirks_v2_primary_entity():
         )
     )
 
-    with pytest.raises(ValueError):
-        # Having a second primary entity is not allowed
-        builder.sensor(
-            OnOff.AttributeDefs.on_time.name,
-            OnOff.cluster_id,
-            translation_key="on_time",
-            fallback_name="On time",
-            primary=True,
-        )
-
     entry = builder.add_to_registry(registry)
 
     entity_metadata = entry.zha_device_factory.quirk_definition.entity_metadata
     assert len(entity_metadata) == 1
     assert entity_metadata[0].primary is True
+
+    # Having a second primary entity is not allowed
+    builder.sensor(
+        OnOff.AttributeDefs.on_time.name,
+        OnOff.cluster_id,
+        translation_key="on_time",
+        fallback_name="On time",
+        primary=True,
+    )
+
+    with pytest.raises(ValueError, match="Only one primary entity"):
+        builder.add_to_registry(registry)
 
 
 def test_quirks_v2_change_entity_metadata():
@@ -463,11 +444,7 @@ def test_quirks_v2_change_entity_metadata():
 
     assert entry.zha_device_factory.quirk_definition.changed_entity_metadata == (
         ChangedEntityMetadata(
-            endpoint_id=1,
-            cluster_id=None,
-            cluster_type=None,
-            unique_id_suffix="something",
-            function=None,
+            filter=EntityFilter(endpoint_id=1, unique_id_suffix="something"),
             new_primary=True,
             new_unique_id=None,
             new_translation_key=None,
@@ -479,11 +456,11 @@ def test_quirks_v2_change_entity_metadata():
             new_fallback_name=None,
         ),
         ChangedEntityMetadata(
-            endpoint_id=1,
-            cluster_id=OnOff.cluster_id,
-            cluster_type=ClusterType.Server,  # by default
-            unique_id_suffix=None,
-            function=None,
+            filter=EntityFilter(
+                endpoint_id=1,
+                cluster_id=OnOff.cluster_id,
+                cluster_type=ClusterType.Server,  # by default
+            ),
             new_primary=None,
             new_unique_id=None,
             new_translation_key="custom_key",
@@ -495,11 +472,11 @@ def test_quirks_v2_change_entity_metadata():
             new_fallback_name=None,
         ),
         ChangedEntityMetadata(
-            endpoint_id=1,
-            cluster_id=OnOff.cluster_id,
-            cluster_type=ClusterType.Client,
-            unique_id_suffix=None,
-            function=None,
+            filter=EntityFilter(
+                endpoint_id=1,
+                cluster_id=OnOff.cluster_id,
+                cluster_type=ClusterType.Client,
+            ),
             new_primary=None,
             new_unique_id=None,
             new_translation_key=None,
@@ -511,11 +488,7 @@ def test_quirks_v2_change_entity_metadata():
             new_fallback_name=None,
         ),
         ChangedEntityMetadata(
-            endpoint_id=None,
-            cluster_id=None,
-            cluster_type=None,
-            unique_id_suffix=None,
-            function=filter_func,
+            filter=EntityFilter(function=filter_func),
             new_primary=None,
             new_unique_id="custom_unique_id",
             new_translation_key=None,

@@ -1,6 +1,8 @@
 """VZM32-SN MMwave Switch/Dimmer Module."""
 
 from zigpy.profiles import zha
+from zigpy.zcl import ClusterType
+from zigpy.zcl.clusters.general import KeepAlive
 
 from zhaquirks.inovelli import (
     INOVELLI_AUTOMATION_TRIGGERS,
@@ -14,6 +16,7 @@ from zhaquirks.inovelli.builder import InovelliQuirkBuilder
     .replaces_endpoint(1, device_type=zha.DeviceType.DIMMABLE_LIGHT)
     .replace_cluster_occurrences(InovelliVZM32SNMMWaveCluster)
     .replace_cluster_occurrences(InovelliVZM32SNCluster)
+    .adds(KeepAlive, cluster_type=ClusterType.Client, endpoint_id=1)
     # number entities
     .inovelli_remote_dimming_up_speed()
     .inovelli_local_dimming_up_speed()
@@ -71,5 +74,6 @@ from zhaquirks.inovelli.builder import InovelliQuirkBuilder
     .inovelli_mmwave_detect_trigger()
     .inovelli_mmwave_hold_time()
     .device_automation_triggers(INOVELLI_AUTOMATION_TRIGGERS)
+    .inovelli_button_events()
     .add_to_registry()
 )
